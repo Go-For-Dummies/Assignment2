@@ -43,6 +43,7 @@ class GtpConnection():
             "list_commands": self.list_commands_cmd,
             "play": self.play_cmd,
             "legal_moves": self.legal_moves_cmd,
+            "solve": self.solve,
             "gogui-rules_game_id": self.gogui_rules_game_id_cmd,
             "gogui-rules_board_size": self.gogui_rules_board_size_cmd,
             "gogui-rules_legal_moves": self.gogui_rules_legal_moves_cmd,
@@ -212,6 +213,26 @@ class GtpConnection():
         sorted_moves = ' '.join(sorted(gtp_moves))
         self.respond(sorted_moves)
 
+    def solve(self, args):
+        """
+        Responds "= winner move" with winning color as winner
+        Only includes move if winner == current player
+        
+        Does not have a time limit, will hang on empty boards size 4 or larger
+        """
+        color = self.board.current_player
+        solution = negamax(self.board)
+        win, move = solution
+        if not win:
+            color = GoBoardUtil.opponent(color)
+        winner = "b" if color == BLACK else "w"
+        if move == 0:
+            self.respond("{}".format(winner))
+        else:
+            move = point_to_coord(move, self.board.size)
+            move = format_point(move).lower()
+            self.respond("{} {}".format(winner, move))
+
     def play_cmd(self, args):
         """
         play a move args[1] for given color args[0] in {'b','w'}
@@ -242,6 +263,7 @@ class GtpConnection():
             self.respond()
         except Exception as e:
             self.respond('illegal move: \"{} {}\" {}'.format(args[0], args[1], str(e)))
+
 
     def genmove_cmd(self, args):
         """
@@ -336,6 +358,29 @@ class GtpConnection():
                      "pstring/Rules GameID/gogui-rules_game_id\n"
                      "pstring/Show Board/gogui-rules_board\n"
                      )
+
+def negamax(board):
+            """
+            Simple boolean negamax implementation with zero optimizations
+
+            Returns (true, winning_move) if current player can win with perfect play
+            Else returns (false, 0) if current player will lose against perfect play
+            Does not prune symmetrically or implement heuristics, simple DFS only.
+            Runs full tree instead of using hash table to reduce to a (much smaller) DAG
+            """
+            current_color = board.current_player
+            legal_moves = GoBoardUtil.generate_legal_moves(board, current_color) 
+            if len(legal_moves) == 0:
+                return (False, 0)
+            # Todo: Heuristic check here to reorder moves
+            for move in legal_moves:
+                # Todo: Hash table check here to see if we've visited this node
+                board.play_move(move, current_color)
+                isWin = not negamax(board)[0]
+                board.undo_move(move, current_color)
+                if isWin:
+                    return (True, move)
+            return (False, 0)
 
 def point_to_coord(point, boardsize):
     """

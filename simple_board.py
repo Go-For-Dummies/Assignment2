@@ -266,6 +266,14 @@ class SimpleGoBoard(object):
         self.current_player = GoBoardUtil.opponent(color)
         return True
 
+    def undo_move(self, point, color):
+        """
+        Undo given move by emptying point and reverting current player
+        """
+        self.board[point] = EMPTY
+        self.current_player = GoBoardUtil.opponent(color)
+        return
+
     def neighbors_of_color(self, point, color):
         """ List of neighbors of point of given color """
         nbc = []
