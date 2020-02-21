@@ -369,13 +369,14 @@ class GtpConnection():
 
 def negamax(board, tt):
     """
-    Simple boolean negamax implementation with zero optimizations
+    Simple boolean negamax implementation with transposition table optimization
 
     Returns (true, winning_move) if current player can win with perfect play
     Else returns (false, 0) if current player will lose against perfect play
     Does not prune symmetrically or implement heuristics, simple DFS only.
     Runs full tree instead of using hash table to reduce to a (much smaller) DAG
     """
+    # Check transposition table to see whether we have encountered this position
     state_code = tt.code(board)
     ret = tt.lookup(state_code)
     if ret is not None: 
@@ -388,7 +389,6 @@ def negamax(board, tt):
         return (False, 0)
     # Todo: Heuristic check here to reorder moves
     for move in legal_moves:
-        # Todo: Hash table check here to see if we've visited this node
         board.play_move(move, current_color)
         isWin = not negamax(board, tt)[0]
         board.undo_move(move, current_color)

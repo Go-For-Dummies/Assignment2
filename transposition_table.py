@@ -13,7 +13,8 @@ class TranspositionTable:
         self.zobrist_table = np.zeros(shape=(size, size), dtype=np.int32)
         for i in range(size):
             for j in range(size):
-                self.zobrist_table[i, j] = random.randint(0, TranspositionTable.MAX_ZOBRIST_RANDOM)
+                self.zobrist_table[i, j] = random.randint(
+                    0, TranspositionTable.MAX_ZOBRIST_RANDOM)
 
     def code(self, board):
         c = 0
