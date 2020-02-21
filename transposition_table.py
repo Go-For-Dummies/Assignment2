@@ -4,7 +4,19 @@ from board_util import EMPTY, BORDER
 
 
 class TranspositionTable:
+"""
+Zobrist-like transposition table for Go/Nogo. 
 
+Each position on the board is assigned a random integer on
+(0 - MAX_ZOBRIST_RANDOM). MAX_ZOBRIST_RANDOM is python maximum 
+integer divided by 2.
+
+Because there is only 2 possible pieces for each 
+position (black==1 or white==2), the board hash is caclulated by 
+taking the random integer for that position, multiplying it by the
+integer value of the piece at that position, and xor with the previous
+code value. 
+"""
     MAX_ZOBRIST_RANDOM = 1073741823
 
     def __init__(self, size):
