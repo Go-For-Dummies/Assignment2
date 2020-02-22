@@ -249,7 +249,7 @@ class GtpConnection():
                 move = point_to_coord(move, self.board.size)
                 move = format_point(move).lower()
                 self.respond("{} {}".format(winner, move))
-        except:
+        except TimeoutError:
             self.respond("unknown")
 
     def play_cmd(self, args):
