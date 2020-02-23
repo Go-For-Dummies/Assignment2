@@ -399,7 +399,14 @@ def negamax(board, tt):
         tt.store(state_code, (False, 0))
         return (False, 0)
     # Todo: Heuristic check here to reorder moves
-    for move in legal_moves:
+    ordered_moves = []
+    for move in legal_moves: # Heuristic check to order moves
+        board.play_move(move, current_color)
+        weight = statisticaly_evaluate(board, current_color)
+        board.undo_move(move, current_color)
+        ordered_moves.append((move, weight))
+    ordered_moves.sort(key=lambda weighted: -weighted[1])
+    for (move, _) in ordered_moves:
         board.play_move(move, current_color)
         isWin = not negamax(board, tt)[0]
         board.undo_move(move, current_color)

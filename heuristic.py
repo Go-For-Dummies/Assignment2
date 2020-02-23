@@ -8,7 +8,7 @@ Move blocked for opponent by capture of color's stone(s): 2 points
 EYEPOINTS = 4
 NEAREYEPOINTS = 2
 CAPTUREPOINTS = 2
-DEBUGMODE = True
+DEBUGMODE = False
 
 import numpy as np
 from board_util import GoBoardUtil, BLACK, WHITE, EMPTY, BORDER, MAXSIZE
