@@ -385,19 +385,16 @@ def negamax(board, tt):
     current_color = board.current_player
     legal_moves = GoBoardUtil.generate_legal_moves(board, current_color)
     if len(legal_moves) == 0:
-        tt.store(state_code, (False, 0))
-        return (False, 0)
+        return tt.store(state_code, (False, 0))
     # Todo: Heuristic check here to reorder moves
     for move in legal_moves:
         board.play_move(move, current_color)
         isWin = not negamax(board, tt)[0]
         board.undo_move(move, current_color)
         if isWin:
-            tt.store(state_code, (True, move))
-            return (True, move)
+            return tt.store(state_code, (True, move))
     
-    tt.store(state_code, (False, 0))
-    return (False, 0)
+    return tt.store(state_code, (False, 0))
 
 
 def point_to_coord(point, boardsize):

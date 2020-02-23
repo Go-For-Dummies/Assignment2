@@ -46,3 +46,4 @@ class TranspositionTable:
 
     def store(self, code, data):
         self.table[code] = data
+        return data
