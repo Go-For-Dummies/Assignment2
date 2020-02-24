@@ -1,6 +1,7 @@
 from Nogo import Nogo
 from gtp_connection import GtpConnection
 from simple_board import SimpleGoBoard
+from board_util import GoBoardUtil
 
 board = SimpleGoBoard(7)
 con = GtpConnection(Nogo(), board)
@@ -24,6 +25,17 @@ def setup():
         con.play_cmd(m)
     con.showboard_cmd([])
     con.evaluate([])
+
+    ar = [[1, 1, 2, 0, 0, 0, 0, 0, 0]
+        , [2, 0, 2, 1, 1, 0, 0, 0, 0]
+        , [0, 2, 1, 2, 0, 1, 0, 0, 0]
+        , [2, 0, 0, 1, 2, 1, 0, 0, 0]
+        , [0, 2, 2, 2, 1, 0, 0, 1, 0]
+        , [0, 0, 0, 0, 0, 0, 0, 0, 0]
+        , [0, 0, 0, 0, 0, 0, 0, 0, 0]
+        , [0, 0, 0, 0, 0, 0, 0, 0, 0]
+        , [0, 0, 0, 0, 0, 0, 0, 0, 0]]
+    
 
     con.boardsize_cmd(['9'])
     moves = [
@@ -52,6 +64,8 @@ def setup():
     for m in moves:
         con.play_cmd(m)
     con.showboard_cmd([])
+    bard = GoBoardUtil.get_twoD_board(con.board)
+    print(bard)
     con.evaluate([])
     con.play_cmd(('b', 'g2'))
     con.showboard_cmd([])
