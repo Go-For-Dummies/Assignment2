@@ -20,7 +20,6 @@ def setup():
         ('w', 'd1'),
         ('b', 'd3'),
     ]
-
     for m in moves:
         con.play_cmd(m)
 

@@ -63,6 +63,6 @@ class TTUtil(object):
         for i in range(3): # Each rotation is a symmetrical board
             twoD_array = np.rot90(twoD_array)
             arrays.append(twoD_array)
-        for ar in arrays: # Each rotation flipped across x axis is symmetrical
-            arrays.append(np.fliplr(ar))
+        for i in range(4): # Each rotation flipped across x axis is symmetrical
+            arrays.append(np.fliplr(arrays[i]))
         return arrays

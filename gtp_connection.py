@@ -392,7 +392,8 @@ class GtpConnection():
                      )
 
 
-def negamax(board, tt, bbl = [], wbl = [], HeuristicMode = True):
+def negamax(board, tt, bbl = [], wbl = [], HeuristicMode = True,
+                                            SymmetryCheck = False):
     """
     Simple boolean negamax implementation with transposition table optimization
 
@@ -406,16 +407,15 @@ def negamax(board, tt, bbl = [], wbl = [], HeuristicMode = True):
     ret = tt.lookup(state_code)
     if ret is not None: 
         return ret
-
-    # Check symmetrical equivalents of current board position
-    twoD_board = GoBoardUtil.get_twoD_board(board)
-    symmetries = TTUtil.symmetries(twoD_board)
-    for tdb in symmetries:
-        code = tt.code_2d(tdb)
-        ret = tt.lookup(code)
-        if ret is not None:
-            return ret
-    
+    if SymmetryCheck is True:
+        # Check symmetrical equivalents of current board position
+        twoD_board = GoBoardUtil.get_twoD_board(board)
+        symmetries = TTUtil.symmetries(twoD_board)
+        for tdb in symmetries:
+            code = tt.code_2d(tdb)
+            ret = tt.lookup(code)
+            if ret is not None:
+                return ret
     current_color = board.current_player
     empty_points = list(board.get_empty_points())
     if current_color is BLACK: # Remove known illegal moves
@@ -459,13 +459,19 @@ def negamax(board, tt, bbl = [], wbl = [], HeuristicMode = True):
                     wbl.append(move)
 
     else:
-        for move in legal_moves:
-            board.fast_play_move(move, current_color)
-            isWin = not negamax(board, tt)[0]
-            board.undo_move(move, current_color)
-            if isWin:
-                tt.store(state_code, (True, move))
-                return (True, move)
+        for move in empty_points:
+            try: # Illegal moves will raise ValueError
+                board.play_move(move, current_color)
+                isWin = not negamax(board, tt, list(bbl), list(wbl))[0]
+                board.undo_move(move, current_color)
+                if isWin:
+                    tt.store(state_code, (True, move))
+                    return (True, move)
+            except ValueError: # Add illegal move to bl so we don't try it again
+                if current_color is BLACK:
+                    bbl.append(move)
+                if current_color is WHITE:
+                    wbl.append(move)
     
     tt.store(state_code, (False, 0))
     return (False, 0)
