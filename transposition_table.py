@@ -38,6 +38,15 @@ class TranspositionTable:
                     c = c ^ (self.zobrist_table[i, j] * color)
         return c
 
+    def code_2d(self, board2d):
+        c = 0
+        for i in range(len(board2d)):
+            for j in range(len(board2d)):
+                color = board2d[i, j]
+                if color is not EMPTY and color is not BORDER:
+                    c = c ^ (self.zobrist_table[i, j] * color)
+        return c
+
     def lookup(self, code):
         if code in self.table:
             return self.table[code]
@@ -46,3 +55,14 @@ class TranspositionTable:
 
     def store(self, code, data):
         self.table[code] = data
+
+class TTUtil(object):
+    @staticmethod
+    def symmetries(twoD_array):
+        arrays = [twoD_array]
+        for i in range(3): # Each rotation is a symmetrical board
+            twoD_array = np.rot90(twoD_array)
+            arrays.append(twoD_array)
+        for ar in arrays: # Each rotation flipped across x axis is symmetrical
+            arrays.append(np.fliplr(ar))
+        return arrays

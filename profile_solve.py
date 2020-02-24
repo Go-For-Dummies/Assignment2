@@ -25,4 +25,4 @@ def setup():
         con.play_cmd(m)
 
 setup()
-cProfile.run("solve()", sort='time')
+cProfile.run("solve()", sort='cumtime')
