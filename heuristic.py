@@ -101,7 +101,7 @@ def capture_level(board, point, color):
         return -CAPTUREPOINTS
     return 0
 
-def statisticaly_evaluate(board, color):
+def statisticaly_evaluate(board, color, CaptureMode = False):
     """
     Calculates an integer score for how advantageous the board is for
     player color. Score is determined by how many empty points are
@@ -113,6 +113,6 @@ def statisticaly_evaluate(board, color):
     for point in spaces:
         eyeScore = eye_level(board, point, color)
         score += eyeScore
-        if eyeScore == 0:
+        if eyeScore == 0 and CaptureMode is True:
             score += capture_level(board, point, color)
     return score

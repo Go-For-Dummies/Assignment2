@@ -12,7 +12,7 @@ from board_util import GoBoardUtil, BLACK, WHITE, EMPTY, BORDER, PASS, \
     MAXSIZE, coord_to_point
 import numpy as np
 import re
-from transposition_table import TranspositionTable
+from transposition_table import TranspositionTable, TTUtil
 from heuristic import statisticaly_evaluate
 
 
@@ -48,6 +48,7 @@ class GtpConnection():
             "legal_moves": self.legal_moves_cmd,
             "solve": self.solve,
             "evaluate": self.evaluate,
+            "checkhash": self.check_hash,
             "gogui-rules_game_id": self.gogui_rules_game_id_cmd,
             "gogui-rules_board_size": self.gogui_rules_board_size_cmd,
             "gogui-rules_legal_moves": self.gogui_rules_legal_moves_cmd,
@@ -227,6 +228,19 @@ class GtpConnection():
         current = "black" if self.board.current_player == BLACK else "white"
         self.respond("{} for {}".format(score, current))
 
+    def check_hash(self, args):
+        """
+        Prints hash for TT and then prints hash for 2D TT
+        They should always be the same
+        """
+        tt = TranspositionTable(self.board.size)
+        state_code = tt.code(self.board)
+        print("1D code: {}".format(state_code))
+        twoD_board = GoBoardUtil.get_twoD_board(self.board)
+        print(twoD_board)
+        twoD_code = tt.code_2d(twoD_board)
+        print("2D code: {}".format(twoD_code))
+
     def solve(self, args):
         """
         Responds "= winner move" with winning color as winner
@@ -378,7 +392,8 @@ class GtpConnection():
                      )
 
 
-def negamax(board, tt):
+def negamax(board, tt, bbl = [], wbl = [], HeuristicMode = True,
+                                            SymmetryCheck = False):
     """
     Simple boolean negamax implementation with transposition table optimization
 
@@ -392,25 +407,64 @@ def negamax(board, tt):
     ret = tt.lookup(state_code)
     if ret is not None: 
         return ret
-    
+    if SymmetryCheck is True:
+        # Check symmetrical equivalents of current board position
+        twoD_board = GoBoardUtil.get_twoD_board(board)
+        symmetries = TTUtil.symmetries(twoD_board)
+        for tdb in symmetries:
+            code = tt.code_2d(tdb)
+            ret = tt.lookup(code)
+            if ret is not None:
+                return ret
     current_color = board.current_player
-    legal_moves = GoBoardUtil.generate_legal_moves(board, current_color)
-    if len(legal_moves) == 0:
+    empty_points = list(board.get_empty_points())
+    if current_color is BLACK: # Remove known illegal moves
+        for pt in bbl:
+            if pt in empty_points:
+                empty_points.remove(pt)
+    if current_color is WHITE:
+        for pt in wbl:
+            if pt in empty_points:
+                empty_points.remove(pt)
+  
+    if len(empty_points) == 0:
         return tt.store(state_code, (False, 0))
-    # Todo: Heuristic check here to reorder moves
-    ordered_moves = []
-    for move in legal_moves: # Heuristic check to order moves
-        board.play_move(move, current_color)
-        weight = statisticaly_evaluate(board, current_color)
-        board.undo_move(move, current_color)
-        ordered_moves.append((move, weight))
-    ordered_moves.sort(key=lambda weighted: -weighted[1])
-    for (move, _) in ordered_moves:
-        board.play_move(move, current_color)
-        isWin = not negamax(board, tt)[0]
-        board.undo_move(move, current_color)
-        if isWin:
-            return tt.store(state_code, (True, move))
+
+    if HeuristicMode is True:
+        ordered_moves = []
+        for move in empty_points: # Heuristic check to order moves
+            board.fast_play_move(move, current_color)
+            weight = statisticaly_evaluate(board, current_color)
+            board.undo_move(move, current_color)
+            ordered_moves.append((move, weight))
+        ordered_moves.sort(key=lambda weighted: -weighted[1])
+
+        for (move, _) in ordered_moves:
+            try: # Illegal moves will raise ValueError
+                board.play_move(move, current_color)
+                isWin = not negamax(board, tt, list(bbl), list(wbl))[0]
+                board.undo_move(move, current_color)
+                if isWin:
+                    return tt.store(state_code, (True, move))
+            except ValueError: # Add illegal move to bl so we don't try it again
+                if current_color is BLACK:
+                    bbl.append(move)
+                if current_color is WHITE:
+                    wbl.append(move)
+
+    else:
+        for move in empty_points:
+            try: # Illegal moves will raise ValueError
+                board.play_move(move, current_color)
+                isWin = not negamax(board, tt, list(bbl), list(wbl))[0]
+                board.undo_move(move, current_color)
+                if isWin:
+                    return tt.store(state_code, (True, move))
+            except ValueError: # Add illegal move to bl so we don't try it again
+                if current_color is BLACK:
+                    bbl.append(move)
+                if current_color is WHITE:
+                    wbl.append(move)
     
     return tt.store(state_code, (False, 0))
 
