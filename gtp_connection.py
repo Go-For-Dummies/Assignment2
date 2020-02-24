@@ -220,8 +220,8 @@ class GtpConnection():
         """
         Sets the maximum time to allow for genmove and solve commands
         """
-        TIMELIMIT = args[0]
-        self.respond()
+        TIMELIMIT = int(args[0])
+        self.respond(TIMELIMIT)
 
     def solve(self, args):
         """
@@ -232,7 +232,7 @@ class GtpConnection():
         """
         try:
             color = self.board.current_player
-            signal.signal(signal.SIGALRM, timeout_handler())
+            signal.signal(signal.SIGALRM, timeout_handler)
             signal.alarm(TIMELIMIT)
             solution = negamax(self.board)
             signal.alarm(0)
@@ -292,7 +292,7 @@ class GtpConnection():
             return
         else:
             try:
-                signal.signal(signal.SIGALRM, timeout_handler())
+                signal.signal(signal.SIGALRM, timeout_handler)
                 signal.alarm(TIMELIMIT)
                 solution = negamax(self.board)
                 signal.alarm(0)
@@ -414,7 +414,7 @@ def negamax(board):
                     return (True, move)
             return (False, 0)
 
-def timeout_handler():
+def timeout_handler(signum, frame):
     raise TimeoutError
 
 def point_to_coord(point, boardsize):
