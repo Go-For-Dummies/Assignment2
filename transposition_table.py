@@ -63,10 +63,6 @@ class TTUtil(object):
         for i in range(3): # Each rotation is a symmetrical board
             twoD_array = np.rot90(twoD_array)
             arrays.append(twoD_array)
-        """
-        TODO:
-        np.xmirror does not exist, need to mirror array across x axis
-        for ar in arrays:
-            arrays.append(np.xmirror(ar))
-        """
+        for ar in arrays: # Each rotation flipped across x axis is symmetrical
+            arrays.append(np.fliplr(ar))
         return arrays
