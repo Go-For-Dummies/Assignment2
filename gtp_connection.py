@@ -13,6 +13,7 @@ from board_util import GoBoardUtil, BLACK, WHITE, EMPTY, BORDER, PASS, \
 import numpy as np
 import re
 from transposition_table import TranspositionTable
+from heuristic import statisticaly_evaluate
 
 
 class GtpConnection():
@@ -46,6 +47,7 @@ class GtpConnection():
             "play": self.play_cmd,
             "legal_moves": self.legal_moves_cmd,
             "solve": self.solve,
+            "evaluate": self.evaluate,
             "gogui-rules_game_id": self.gogui_rules_game_id_cmd,
             "gogui-rules_board_size": self.gogui_rules_board_size_cmd,
             "gogui-rules_legal_moves": self.gogui_rules_legal_moves_cmd,
@@ -215,6 +217,15 @@ class GtpConnection():
             gtp_moves.append(format_point(coords))
         sorted_moves = ' '.join(sorted(gtp_moves))
         self.respond(sorted_moves)
+
+    def evaluate(self, args):
+        """
+        Calculates how advantageous the current board is for the current
+        player and returns an integer score (higher is better)
+        """
+        score = statisticaly_evaluate(self.board, self.board.current_player)
+        current = "black" if self.board.current_player == BLACK else "white"
+        self.respond("{} for {}".format(score, current))
 
     def solve(self, args):
         """
@@ -387,7 +398,14 @@ def negamax(board, tt):
     if len(legal_moves) == 0:
         return tt.store(state_code, (False, 0))
     # Todo: Heuristic check here to reorder moves
-    for move in legal_moves:
+    ordered_moves = []
+    for move in legal_moves: # Heuristic check to order moves
+        board.play_move(move, current_color)
+        weight = statisticaly_evaluate(board, current_color)
+        board.undo_move(move, current_color)
+        ordered_moves.append((move, weight))
+    ordered_moves.sort(key=lambda weighted: -weighted[1])
+    for (move, _) in ordered_moves:
         board.play_move(move, current_color)
         isWin = not negamax(board, tt)[0]
         board.undo_move(move, current_color)
