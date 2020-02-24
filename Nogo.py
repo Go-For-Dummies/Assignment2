@@ -1,6 +1,6 @@
-#!/home/mmelley/anaconda3/bin/python3
-#/home/mmelley/anaconda3/bin/python3
-#Set the path to your python3 above
+#!/usr/local/bin/python3
+#/usr/bin/python3
+# Set the path to your python3 above
 
 from gtp_connection import GtpConnection
 from board_util import GoBoardUtil
