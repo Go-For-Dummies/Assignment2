@@ -276,6 +276,7 @@ class SimpleGoBoard(object):
             if self.board[nb] == opp_color:
                 single_capture = self._detect_and_process_capture(nb)
                 if single_capture == True:
+                    self.board[point] = EMPTY # undo capture
                     raise ValueError("capture")
         if not self._stone_has_liberty(point):
             # check suicide of whole block
@@ -294,7 +295,7 @@ class SimpleGoBoard(object):
         Undo given move by emptying point and reverting current player
         """
         self.board[point] = EMPTY
-        self.current_player = GoBoardUtil.opponent(color)
+        self.current_player = color
         return
 
     def fast_play_move(self, point, color):

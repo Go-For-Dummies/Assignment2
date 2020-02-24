@@ -12,6 +12,7 @@ from board_util import GoBoardUtil, BLACK, WHITE, EMPTY, BORDER, PASS, \
     MAXSIZE, coord_to_point
 import numpy as np
 import re
+import copy
 from transposition_table import TranspositionTable
 from heuristic import statisticaly_evaluate
 
@@ -378,7 +379,7 @@ class GtpConnection():
                      )
 
 
-def negamax(board, tt, HeuristicMode = True):
+def negamax(board, tt, bl = {}, HeuristicMode = True):
     """
     Simple boolean negamax implementation with transposition table optimization
 
@@ -394,25 +395,46 @@ def negamax(board, tt, HeuristicMode = True):
         return ret
     
     current_color = board.current_player
-    legal_moves = GoBoardUtil.generate_legal_moves(board, current_color)
+    empty_points = []
+    ep = board.get_empty_points()
+    for p in ep: # Convert from numpy array to list so we can remove items
+        empty_points.append(p)
+    for pt, clrs in bl.items(): # Remove known illegal plays
+        if current_color in clrs and pt in empty_points:
+            empty_points.remove(pt)
+    """
     if len(legal_moves) == 0:
         tt.store(state_code, (False, 0))
         return (False, 0)
+    """
+    if len(empty_points) == 0:
+        tt.store(state_code, (False, 0))
+        return (False, 0)
+
     if HeuristicMode is True:
         ordered_moves = []
-        for move in legal_moves: # Heuristic check to order moves
+        for move in empty_points: # Heuristic check to order moves
             board.fast_play_move(move, current_color)
             weight = statisticaly_evaluate(board, current_color)
             board.undo_move(move, current_color)
             ordered_moves.append((move, weight))
         ordered_moves.sort(key=lambda weighted: -weighted[1])
+
         for (move, _) in ordered_moves:
-            board.fast_play_move(move, current_color)
-            isWin = not negamax(board, tt)[0]
-            board.undo_move(move, current_color)
-            if isWin:
-                tt.store(state_code, (True, move))
-                return (True, move)
+            try: # Illegal moves will raise ValueError
+                board.play_move(move, current_color)
+                newbl = copy.deepcopy(bl)
+                isWin = not negamax(board, tt, newbl)[0]
+                board.undo_move(move, current_color)
+                if isWin:
+                    tt.store(state_code, (True, move))
+                    return (True, move)
+            except ValueError: # Add illegal move to bl so we don't try it again
+                if move in bl:
+                    bl[move].add(current_color)
+                else:
+                    bl[move] = {current_color}
+
     else:
         for move in legal_moves:
             board.fast_play_move(move, current_color)
