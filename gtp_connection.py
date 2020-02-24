@@ -401,13 +401,13 @@ def negamax(board, tt, HeuristicMode = True):
     if HeuristicMode is True:
         ordered_moves = []
         for move in legal_moves: # Heuristic check to order moves
-            board.play_move(move, current_color)
+            board.fast_play_move(move, current_color)
             weight = statisticaly_evaluate(board, current_color)
             board.undo_move(move, current_color)
             ordered_moves.append((move, weight))
         ordered_moves.sort(key=lambda weighted: -weighted[1])
         for (move, _) in ordered_moves:
-            board.play_move(move, current_color)
+            board.fast_play_move(move, current_color)
             isWin = not negamax(board, tt)[0]
             board.undo_move(move, current_color)
             if isWin:
@@ -415,7 +415,7 @@ def negamax(board, tt, HeuristicMode = True):
                 return (True, move)
     else:
         for move in legal_moves:
-            board.play_move(move, current_color)
+            board.fast_play_move(move, current_color)
             isWin = not negamax(board, tt)[0]
             board.undo_move(move, current_color)
             if isWin:
