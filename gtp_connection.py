@@ -426,14 +426,9 @@ def negamax(board, tt, bbl = [], wbl = [], HeuristicMode = True,
         for pt in wbl:
             if pt in empty_points:
                 empty_points.remove(pt)
-    """
-    if len(legal_moves) == 0:
-        tt.store(state_code, (False, 0))
-        return (False, 0)
-    """
+  
     if len(empty_points) == 0:
-        tt.store(state_code, (False, 0))
-        return (False, 0)
+        return tt.store(state_code, (False, 0))
 
     if HeuristicMode is True:
         ordered_moves = []
@@ -450,8 +445,7 @@ def negamax(board, tt, bbl = [], wbl = [], HeuristicMode = True,
                 isWin = not negamax(board, tt, list(bbl), list(wbl))[0]
                 board.undo_move(move, current_color)
                 if isWin:
-                    tt.store(state_code, (True, move))
-                    return (True, move)
+                    return tt.store(state_code, (True, move))
             except ValueError: # Add illegal move to bl so we don't try it again
                 if current_color is BLACK:
                     bbl.append(move)
@@ -465,16 +459,14 @@ def negamax(board, tt, bbl = [], wbl = [], HeuristicMode = True,
                 isWin = not negamax(board, tt, list(bbl), list(wbl))[0]
                 board.undo_move(move, current_color)
                 if isWin:
-                    tt.store(state_code, (True, move))
-                    return (True, move)
+                    return tt.store(state_code, (True, move))
             except ValueError: # Add illegal move to bl so we don't try it again
                 if current_color is BLACK:
                     bbl.append(move)
                 if current_color is WHITE:
                     wbl.append(move)
     
-    tt.store(state_code, (False, 0))
-    return (False, 0)
+    return tt.store(state_code, (False, 0))
 
 
 def point_to_coord(point, boardsize):
