@@ -9,7 +9,7 @@ at the University of Edinburgh.
 import traceback
 from sys import stdin, stdout, stderr
 from board_util import GoBoardUtil, BLACK, WHITE, EMPTY, BORDER, PASS, \
-                       MAXSIZE, coord_to_point
+                       MAXSIZE, TIMELIMIT, coord_to_point
 import numpy as np
 import re
 import signal
@@ -223,9 +223,6 @@ class GtpConnection():
         TIMELIMIT = args[0]
         self.respond()
 
-    def timeout_handler(self):
-        raise TimeoutError
-
     def solve(self, args):
         """
         Responds "= winner move" with winning color as winner
@@ -235,7 +232,7 @@ class GtpConnection():
         """
         try:
             color = self.board.current_player
-            signal.signal(signal.SIGALRM, self.timeout_handler)
+            signal.signal(signal.SIGALRM, timeout_handler())
             signal.alarm(TIMELIMIT)
             solution = negamax(self.board)
             signal.alarm(0)
@@ -290,14 +287,30 @@ class GtpConnection():
         """
         board_color = args[0].lower()
         color = color_to_int(board_color)
+        if self.go_engine.get_move(self.board, color) is None:
+            self.respond("resign")
+            return
+        else:
+            try:
+                signal.signal(signal.SIGALRM, timeout_handler())
+                signal.alarm(TIMELIMIT)
+                solution = negamax(self.board)
+                signal.alarm(0)
+                win, move = solution
+                if not win:
+                    self.genmove_random(color)
+                else:
+                    self.board.play_move(move, color)
+            except TimeoutError:
+                self.genmove_random(color)
+
+    def genmove_random(self, color):
         move = self.go_engine.get_move(self.board, color)
         move_coord = point_to_coord(move, self.board.size)
         move_as_string = format_point(move_coord)
         if self.board.is_legal(move, color):
             self.board.play_move(move, color)
             self.respond(move_as_string)
-        else:
-            self.respond("resign")
 
     def gogui_rules_game_id_cmd(self, args):
         self.respond("NoGo")
@@ -400,6 +413,9 @@ def negamax(board):
                 if isWin:
                     return (True, move)
             return (False, 0)
+
+def timeout_handler():
+    raise TimeoutError
 
 def point_to_coord(point, boardsize):
     """
