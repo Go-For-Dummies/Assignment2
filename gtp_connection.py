@@ -379,7 +379,7 @@ class GtpConnection():
                      )
 
 
-def negamax(board, tt, bl = {}, HeuristicMode = True):
+def negamax(board, tt, bbl = [], wbl = [], HeuristicMode = True):
     """
     Simple boolean negamax implementation with transposition table optimization
 
@@ -395,13 +395,15 @@ def negamax(board, tt, bl = {}, HeuristicMode = True):
         return ret
     
     current_color = board.current_player
-    empty_points = []
-    ep = board.get_empty_points()
-    for p in ep: # Convert from numpy array to list so we can remove items
-        empty_points.append(p)
-    for pt, clrs in bl.items(): # Remove known illegal plays
-        if current_color in clrs and pt in empty_points:
-            empty_points.remove(pt)
+    empty_points = list(board.get_empty_points())
+    if current_color is BLACK: # Remove known illegal moves
+        for pt in bbl:
+            if pt in empty_points:
+                empty_points.remove(pt)
+    if current_color is WHITE:
+        for pt in wbl:
+            if pt in empty_points:
+                empty_points.remove(pt)
     """
     if len(legal_moves) == 0:
         tt.store(state_code, (False, 0))
@@ -423,17 +425,16 @@ def negamax(board, tt, bl = {}, HeuristicMode = True):
         for (move, _) in ordered_moves:
             try: # Illegal moves will raise ValueError
                 board.play_move(move, current_color)
-                newbl = copy.deepcopy(bl)
-                isWin = not negamax(board, tt, newbl)[0]
+                isWin = not negamax(board, tt, list(bbl), list(wbl))[0]
                 board.undo_move(move, current_color)
                 if isWin:
                     tt.store(state_code, (True, move))
                     return (True, move)
             except ValueError: # Add illegal move to bl so we don't try it again
-                if move in bl:
-                    bl[move].add(current_color)
-                else:
-                    bl[move] = {current_color}
+                if current_color is BLACK:
+                    bbl.append(move)
+                if current_color is WHITE:
+                    wbl.append(move)
 
     else:
         for move in legal_moves:
