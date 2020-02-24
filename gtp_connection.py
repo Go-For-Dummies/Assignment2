@@ -227,8 +227,6 @@ class GtpConnection():
         """
         Responds "= winner move" with winning color as winner
         Only includes move if winner == current player
-
-        Does not have a time limit, will hang on empty boards size 4 or larger
         """
         try:
             color = self.board.current_player
