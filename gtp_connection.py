@@ -221,7 +221,7 @@ class GtpConnection():
         Sets the maximum time to allow for genmove and solve commands
         """
         TIMELIMIT = int(args[0])
-        self.respond(TIMELIMIT)
+        self.respond()
 
     def solve(self, args):
         """
