@@ -1,6 +1,6 @@
-#!/usr/local/bin/python3
-#/usr/bin/python3
-# Set the path to your python3 above
+#!//Users/zachdrever/.pyenv/versions/3.7.4/bin/python3
+#!/usr/bin/python3
+#/usr/local/bin/python3
 
 from gtp_connection import GtpConnection
 from board_util import GoBoardUtil

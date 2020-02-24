@@ -13,6 +13,8 @@ from board_util import GoBoardUtil, BLACK, WHITE, EMPTY, BORDER, PASS, \
 import numpy as np
 import re
 import signal
+from transposition_table import TranspositionTable
+from heuristic import statisticaly_evaluate
 
 class GtpConnection():
 
