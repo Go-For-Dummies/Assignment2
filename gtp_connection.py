@@ -247,6 +247,7 @@ class GtpConnection():
         """
         Sets the maximum time to allow for genmove and solve commands
         """
+        global TIMELIMIT
         TIMELIMIT = int(args[0])
         self.respond()
 
@@ -257,9 +258,12 @@ class GtpConnection():
         """
         try:
             color = self.board.current_player
+            global TIMELIMIT
             signal.signal(signal.SIGALRM, timeout_handler)
-            signal.alarm(TIMELIMIT)
-            solution = negamax(self.board)
+            signal.alarm(int(TIMELIMIT))
+            tt = TranspositionTable(self.board.size)
+            board_copy = self.board.copy()
+            solution = negamax(board_copy, tt)
             signal.alarm(0)
             win, move = solution
             if not win:
@@ -313,6 +317,7 @@ class GtpConnection():
         """
         Generate a move for the color args[0] in {'b', 'w'}, for the game of gomoku.
         """
+        global TIMELIMIT
         board_color = args[0].lower()
         color = color_to_int(board_color)
         if self.go_engine.get_move(self.board, color) is None:
@@ -321,14 +326,19 @@ class GtpConnection():
         else:
             try:
                 signal.signal(signal.SIGALRM, timeout_handler)
-                signal.alarm(TIMELIMIT)
-                solution = negamax(self.board)
+                signal.alarm(int(TIMELIMIT))
+                tt = TranspositionTable(self.board.size)
+                board_copy = self.board.copy()
+                solution = negamax(board_copy, tt)
                 signal.alarm(0)
                 win, move = solution
                 if not win:
                     self.genmove_random(color)
                 else:
                     self.board.play_move(move, color)
+                    move_coord = point_to_coord(move, self.board.size)
+                    move_as_string = format_point(move_coord)
+                    self.respond(move_as_string)
             except TimeoutError:
                 self.genmove_random(color)
 
