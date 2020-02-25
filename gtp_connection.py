@@ -431,7 +431,7 @@ class GtpConnection():
 
 
 def negamax(board, tt, bbl = [], wbl = [], HeuristicMode = True,
-                                            SymmetryCheck = False):
+                                            SymmetryCheck = True):
     """
     Simple boolean negamax implementation with transposition table optimization
 
