@@ -2,19 +2,19 @@
 gtp_connection.py
 Module for playing games of Go using GoTextProtocol
 
-Parts of this code were originally based on the gtp module 
-in the Deep-Go project by Isaac Henrion and Amos Storkey 
+Parts of this code were originally based on the gtp module
+in the Deep-Go project by Isaac Henrion and Amos Storkey
 at the University of Edinburgh.
 """
 import traceback
 from sys import stdin, stdout, stderr
 from board_util import GoBoardUtil, BLACK, WHITE, EMPTY, BORDER, PASS, \
-    MAXSIZE, coord_to_point
+                       MAXSIZE, TIMELIMIT, coord_to_point
 import numpy as np
 import re
+import signal
 from transposition_table import TranspositionTable, TTUtil
 from heuristic import statisticaly_evaluate
-
 
 class GtpConnection():
 
@@ -26,7 +26,7 @@ class GtpConnection():
         ----------
         go_engine:
             a program that can reply to a set of GTP commandsbelow
-        board: 
+        board:
             Represents the current board state.
         """
         self._debug_mode = debug_mode
@@ -49,6 +49,7 @@ class GtpConnection():
             "solve": self.solve,
             "evaluate": self.evaluate,
             "checkhash": self.check_hash,
+            "timelimit": self.timelimit,
             "gogui-rules_game_id": self.gogui_rules_game_id_cmd,
             "gogui-rules_board_size": self.gogui_rules_board_size_cmd,
             "gogui-rules_legal_moves": self.gogui_rules_legal_moves_cmd,
@@ -67,7 +68,8 @@ class GtpConnection():
             "known_command": (1, 'Usage: known_command CMD_NAME'),
             "genmove": (1, 'Usage: genmove {w,b}'),
             "play": (2, 'Usage: play {b,w} MOVE'),
-            "legal_moves": (1, 'Usage: legal_moves {w,b}')
+            "legal_moves": (1, 'Usage: legal_moves {w,b}'),
+            "timelimit": (1, 'Usage: timelimit INT')
         }
 
     def write(self, data):
@@ -78,7 +80,7 @@ class GtpConnection():
 
     def start_connection(self):
         """
-        Start a GTP connection. 
+        Start a GTP connection.
         This function continuously monitors standard input for commands.
         """
         line = stdin.readline()
@@ -241,26 +243,40 @@ class GtpConnection():
         twoD_code = tt.code_2d(twoD_board)
         print("2D code: {}".format(twoD_code))
 
+    def timelimit(self, args):
+        """
+        Sets the maximum time to allow for genmove and solve commands
+        """
+        global TIMELIMIT
+        TIMELIMIT = int(args[0])
+        self.respond()
+
     def solve(self, args):
         """
         Responds "= winner move" with winning color as winner
         Only includes move if winner == current player
-
-        Does not have a time limit, will hang on empty boards size 4 or larger
         """
-        color = self.board.current_player
-        tt = TranspositionTable(self.board.size)
-        solution = negamax(self.board, tt)
-        win, move = solution
-        if not win:
-            color = GoBoardUtil.opponent(color)
-        winner = "b" if color == BLACK else "w"
-        if move == 0:
-            self.respond("{}".format(winner))
-        else:
-            move = point_to_coord(move, self.board.size)
-            move = format_point(move).lower()
-            self.respond("{} {}".format(winner, move))
+        try:
+            color = self.board.current_player
+            global TIMELIMIT
+            signal.signal(signal.SIGALRM, timeout_handler)
+            signal.alarm(int(TIMELIMIT))
+            tt = TranspositionTable(self.board.size)
+            board_copy = self.board.copy()
+            solution = negamax(board_copy, tt)
+            signal.alarm(0)
+            win, move = solution
+            if not win:
+                color = GoBoardUtil.opponent(color)
+            winner = "b" if color == BLACK else "w"
+            if move == 0:
+                self.respond("{}".format(winner))
+            else:
+                move = point_to_coord(move, self.board.size)
+                move = format_point(move).lower()
+                self.respond("{} {}".format(winner, move))
+        except TimeoutError:
+            self.respond("unknown")
 
     def play_cmd(self, args):
         """
@@ -301,16 +317,38 @@ class GtpConnection():
         """
         Generate a move for the color args[0] in {'b', 'w'}, for the game of gomoku.
         """
+        global TIMELIMIT
         board_color = args[0].lower()
         color = color_to_int(board_color)
+        if self.go_engine.get_move(self.board, color) is None:
+            self.respond("resign")
+            return
+        else:
+            try:
+                signal.signal(signal.SIGALRM, timeout_handler)
+                signal.alarm(int(TIMELIMIT))
+                tt = TranspositionTable(self.board.size)
+                board_copy = self.board.copy()
+                solution = negamax(board_copy, tt)
+                signal.alarm(0)
+                win, move = solution
+                if not win:
+                    self.genmove_random(color)
+                else:
+                    self.board.play_move(move, color)
+                    move_coord = point_to_coord(move, self.board.size)
+                    move_as_string = format_point(move_coord)
+                    self.respond(move_as_string)
+            except TimeoutError:
+                self.genmove_random(color)
+
+    def genmove_random(self, color):
         move = self.go_engine.get_move(self.board, color)
         move_coord = point_to_coord(move, self.board.size)
         move_as_string = format_point(move_coord)
         if self.board.is_legal(move, color):
             self.board.play_move(move, color)
             self.respond(move_as_string)
-        else:
-            self.respond("resign")
 
     def gogui_rules_game_id_cmd(self, args):
         self.respond("NoGo")
@@ -405,7 +443,7 @@ def negamax(board, tt, bbl = [], wbl = [], HeuristicMode = True,
     # Check transposition table to see whether we have encountered this position
     state_code = tt.code(board)
     ret = tt.lookup(state_code)
-    if ret is not None: 
+    if ret is not None:
         return ret
     if SymmetryCheck is True:
         # Check symmetrical equivalents of current board position
@@ -426,7 +464,7 @@ def negamax(board, tt, bbl = [], wbl = [], HeuristicMode = True,
         for pt in wbl:
             if pt in empty_points:
                 empty_points.remove(pt)
-  
+
     if len(empty_points) == 0:
         return tt.store(state_code, (False, 0))
 
@@ -465,13 +503,16 @@ def negamax(board, tt, bbl = [], wbl = [], HeuristicMode = True,
                     bbl.append(move)
                 if current_color is WHITE:
                     wbl.append(move)
-    
+
     return tt.store(state_code, (False, 0))
 
 
+def timeout_handler(signum, frame):
+    raise TimeoutError
+
 def point_to_coord(point, boardsize):
     """
-    Transform point given as board array index 
+    Transform point given as board array index
     to (row, col) coordinate representation.
     Special case: PASS is not transformed
     """
