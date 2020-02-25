@@ -2,19 +2,28 @@
 gtp_connection.py
 Module for playing games of Go using GoTextProtocol
 
-Parts of this code were originally based on the gtp module 
-in the Deep-Go project by Isaac Henrion and Amos Storkey 
+Parts of this code were originally based on the gtp module
+in the Deep-Go project by Isaac Henrion and Amos Storkey
 at the University of Edinburgh.
 """
 import traceback
 from sys import stdin, stdout, stderr
 from board_util import GoBoardUtil, BLACK, WHITE, EMPTY, BORDER, PASS, \
+<<<<<<< HEAD
     MAXSIZE, coord_to_point
 import numpy as np
 import re
 from transposition_table import TranspositionTable, TTUtil
 from heuristic import statisticaly_evaluate
 
+=======
+                       MAXSIZE, TIMELIMIT, coord_to_point
+import numpy as np
+import re
+import signal
+from transposition_table import TranspositionTable
+from heuristic import statisticaly_evaluate
+>>>>>>> d2b44c1071a540be226db1214d106c6447cd5b62
 
 class GtpConnection():
 
@@ -26,7 +35,7 @@ class GtpConnection():
         ----------
         go_engine:
             a program that can reply to a set of GTP commandsbelow
-        board: 
+        board:
             Represents the current board state.
         """
         self._debug_mode = debug_mode
@@ -47,8 +56,12 @@ class GtpConnection():
             "play": self.play_cmd,
             "legal_moves": self.legal_moves_cmd,
             "solve": self.solve,
+<<<<<<< HEAD
             "evaluate": self.evaluate,
             "checkhash": self.check_hash,
+=======
+            "timelimit": self.timelimit,
+>>>>>>> d2b44c1071a540be226db1214d106c6447cd5b62
             "gogui-rules_game_id": self.gogui_rules_game_id_cmd,
             "gogui-rules_board_size": self.gogui_rules_board_size_cmd,
             "gogui-rules_legal_moves": self.gogui_rules_legal_moves_cmd,
@@ -67,7 +80,8 @@ class GtpConnection():
             "known_command": (1, 'Usage: known_command CMD_NAME'),
             "genmove": (1, 'Usage: genmove {w,b}'),
             "play": (2, 'Usage: play {b,w} MOVE'),
-            "legal_moves": (1, 'Usage: legal_moves {w,b}')
+            "legal_moves": (1, 'Usage: legal_moves {w,b}'),
+            "timelimit": (1, 'Usage: timelimit INT')
         }
 
     def write(self, data):
@@ -78,7 +92,7 @@ class GtpConnection():
 
     def start_connection(self):
         """
-        Start a GTP connection. 
+        Start a GTP connection.
         This function continuously monitors standard input for commands.
         """
         line = stdin.readline()
@@ -219,6 +233,7 @@ class GtpConnection():
         sorted_moves = ' '.join(sorted(gtp_moves))
         self.respond(sorted_moves)
 
+<<<<<<< HEAD
     def evaluate(self, args):
         """
         Calculates how advantageous the current board is for the current
@@ -240,11 +255,20 @@ class GtpConnection():
         print(twoD_board)
         twoD_code = tt.code_2d(twoD_board)
         print("2D code: {}".format(twoD_code))
+=======
+    def timelimit(self, args):
+        """
+        Sets the maximum time to allow for genmove and solve commands
+        """
+        TIMELIMIT = int(args[0])
+        self.respond()
+>>>>>>> d2b44c1071a540be226db1214d106c6447cd5b62
 
     def solve(self, args):
         """
         Responds "= winner move" with winning color as winner
         Only includes move if winner == current player
+<<<<<<< HEAD
 
         Does not have a time limit, will hang on empty boards size 4 or larger
         """
@@ -261,6 +285,27 @@ class GtpConnection():
             move = point_to_coord(move, self.board.size)
             move = format_point(move).lower()
             self.respond("{} {}".format(winner, move))
+=======
+        """
+        try:
+            color = self.board.current_player
+            signal.signal(signal.SIGALRM, timeout_handler)
+            signal.alarm(TIMELIMIT)
+            solution = negamax(self.board)
+            signal.alarm(0)
+            win, move = solution
+            if not win:
+                color = GoBoardUtil.opponent(color)
+            winner = "b" if color == BLACK else "w"
+            if move == 0:
+                self.respond("{}".format(winner))
+            else:
+                move = point_to_coord(move, self.board.size)
+                move = format_point(move).lower()
+                self.respond("{} {}".format(winner, move))
+        except TimeoutError:
+            self.respond("unknown")
+>>>>>>> d2b44c1071a540be226db1214d106c6447cd5b62
 
     def play_cmd(self, args):
         """
@@ -294,8 +339,12 @@ class GtpConnection():
                                format(board_move, self.board2d()))
             self.respond()
         except Exception as e:
+<<<<<<< HEAD
             self.respond('illegal move: \"{} {}\" {}'.format(
                 args[0], args[1], str(e)))
+=======
+            self.respond('illegal move: \"{} {}\" {}'.format(args[0], args[1], str(e)))
+>>>>>>> d2b44c1071a540be226db1214d106c6447cd5b62
 
     def genmove_cmd(self, args):
         """
@@ -303,14 +352,30 @@ class GtpConnection():
         """
         board_color = args[0].lower()
         color = color_to_int(board_color)
+        if self.go_engine.get_move(self.board, color) is None:
+            self.respond("resign")
+            return
+        else:
+            try:
+                signal.signal(signal.SIGALRM, timeout_handler)
+                signal.alarm(TIMELIMIT)
+                solution = negamax(self.board)
+                signal.alarm(0)
+                win, move = solution
+                if not win:
+                    self.genmove_random(color)
+                else:
+                    self.board.play_move(move, color)
+            except TimeoutError:
+                self.genmove_random(color)
+
+    def genmove_random(self, color):
         move = self.go_engine.get_move(self.board, color)
         move_coord = point_to_coord(move, self.board.size)
         move_as_string = format_point(move_coord)
         if self.board.is_legal(move, color):
             self.board.play_move(move, color)
             self.respond(move_as_string)
-        else:
-            self.respond("resign")
 
     def gogui_rules_game_id_cmd(self, args):
         self.respond("NoGo")
@@ -392,6 +457,7 @@ class GtpConnection():
                      )
 
 
+<<<<<<< HEAD
 def negamax(board, tt, bbl = [], wbl = [], HeuristicMode = True,
                                             SymmetryCheck = False):
     """
@@ -441,6 +507,20 @@ def negamax(board, tt, bbl = [], wbl = [], HeuristicMode = True,
 
         for (move, _) in ordered_moves:
             try: # Illegal moves will raise ValueError
+=======
+            Returns (true, winning_move) if current player can win with perfect play
+            Else returns (false, 0) if current player will lose against perfect play
+            Does not prune symmetrically or implement heuristics, simple DFS only.
+            Runs full tree instead of using hash table to reduce to a (much smaller) DAG
+            """
+            current_color = board.current_player
+            legal_moves = GoBoardUtil.generate_legal_moves(board, current_color)
+            if len(legal_moves) == 0:
+                return (False, 0)
+            # Todo: Heuristic check here to reorder moves
+            for move in legal_moves:
+                # Todo: Hash table check here to see if we've visited this node
+>>>>>>> d2b44c1071a540be226db1214d106c6447cd5b62
                 board.play_move(move, current_color)
                 isWin = not negamax(board, tt, list(bbl), list(wbl))[0]
                 board.undo_move(move, current_color)
@@ -469,9 +549,12 @@ def negamax(board, tt, bbl = [], wbl = [], HeuristicMode = True,
     return tt.store(state_code, (False, 0))
 
 
+def timeout_handler(signum, frame):
+    raise TimeoutError
+
 def point_to_coord(point, boardsize):
     """
-    Transform point given as board array index 
+    Transform point given as board array index
     to (row, col) coordinate representation.
     Special case: PASS is not transformed
     """
@@ -493,8 +576,12 @@ def format_point(move):
     row, col = move
     if not 0 <= row < MAXSIZE or not 0 <= col < MAXSIZE:
         raise ValueError
+<<<<<<< HEAD
     return column_letters[col - 1] + str(row)
 
+=======
+    return column_letters[col - 1]+ str(row)
+>>>>>>> d2b44c1071a540be226db1214d106c6447cd5b62
 
 def move_to_coord(point_str, board_size):
     """
@@ -528,6 +615,10 @@ def move_to_coord(point_str, board_size):
 
 def color_to_int(c):
     """convert character to the appropriate integer code"""
+<<<<<<< HEAD
     color_to_int = {"b": BLACK, "w": WHITE, "e": EMPTY,
+=======
+    color_to_int = {"b": BLACK , "w": WHITE, "e": EMPTY,
+>>>>>>> d2b44c1071a540be226db1214d106c6447cd5b62
                     "BORDER": BORDER}
     return color_to_int[c]
