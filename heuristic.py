@@ -101,18 +101,80 @@ def capture_level(board, point, color):
         return -CAPTUREPOINTS
     return 0
 
-def statisticaly_evaluate(board, color, CaptureMode = False):
+def statisticaly_evaluate(board, color, move = None, oweight = None, bneyes = [], wneyes = [], beyes = [], weyes = [], CaptureMode = False):
     """
     Calculates an integer score for how advantageous the board is for
     player color. Score is determined by how many empty points are
     only playable for one player, or are within 1 move of being only
     playable for one player.
     """
-    spaces = board.get_empty_points()
-    score = 0
-    for point in spaces:
-        eyeScore = eye_level(board, point, color)
-        score += eyeScore
-        if eyeScore == 0 and CaptureMode is True:
-            score += capture_level(board, point, color)
-    return score
+    weight = oweight
+    if weight is None:
+        spaces = board.get_empty_points()
+        weight = 0
+        for point in spaces:
+            eyeScore = eye_level(board, point, color)
+            weight += eyeScore
+            if eyeScore == 0 and CaptureMode is True:
+                weight += capture_level(board, point, color)
+        return (weight, bneyes, wneyes, beyes, weyes)
+    shiftscore = 0
+    if color is BLACK:
+        if move in bneyes:
+            shiftscore = -NEAREYEPOINTS
+            weight = weight + shiftscore
+        elif move in wneyes:
+            shiftscore = NEAREYEPOINTS
+            weight = weight + shiftscore
+        elif move in beyes:
+            shiftscore = -EYEPOINTS
+            weight = weight + shiftscore
+        elif move in weyes:
+            raise ValueError("played in enemy eye")
+    if color is WHITE:
+        if move in wneyes:
+            shiftscore = -NEAREYEPOINTS
+            weight = weight + shiftscore
+        elif move in bneyes:
+            shiftscore = NEAREYEPOINTS
+            weight = weight + shiftscore
+        elif move in weyes:
+            shiftscore = -EYEPOINTS
+            weight = weight + shiftscore
+        elif move in beyes:
+            raise ValueError("played in enemy eye")
+    neighbors = board.neighbors[move]
+    for nb in neighbors:
+        eyescore = eye_level(board, nb, color)
+        if color is BLACK:
+            if eyescore == EYEPOINTS:
+                shiftscore = EYEPOINTS - NEAREYEPOINTS
+                beyes.append(nb)
+                bneyes.remove(nb)
+            if eyescore == NEAREYEPOINTS:
+                shiftscore = NEAREYEPOINTS
+                bneyes.append(nb)
+            if eyescore == -EYEPOINTS: # Should be impossible, remove if not encountered
+                raise ValueError("Played on occupied space?")
+            if nb in wneyes:
+                shiftscore = NEAREYEPOINTS
+                wneyes.remove(nb)
+            if nb in weyes: # Should be impossible, remove if not encountered
+                raise ValueError("Played on enemy occupied space?")
+        if color is WHITE:
+            if eyescore == EYEPOINTS:
+                shiftscore = EYEPOINTS - NEAREYEPOINTS
+                weyes.append(nb)
+                wneyes.remove(nb)
+            if eyescore == NEAREYEPOINTS:
+                shiftscore = NEAREYEPOINTS
+                wneyes.append(nb)
+            if eyescore == -EYEPOINTS: # Should be impossible, remove if not encountered
+                raise ValueError("Played on occupied space?")
+            if nb in bneyes:
+                shiftscore = NEAREYEPOINTS
+                bneyes.remove(nb)
+            if nb in beyes: # Should be impossible, remove if not encountered
+                raise ValueError("Played on enemy occupied space?")
+        weight += shiftscore
+    return (weight, bneyes, wneyes, beyes, weyes)

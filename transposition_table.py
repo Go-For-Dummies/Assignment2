@@ -17,12 +17,13 @@ class TranspositionTable:
     integer value of the piece at that position, and xor with the previous
     code value. 
     """
-    MAX_ZOBRIST_RANDOM = 1073741823
+    MAX_ZOBRIST_RANDOM = 4611686018427387901
+    MAX_ZOBRIST_RANDOM1 = 1073741823
 
     def __init__(self, size):
         self.table = {}
         self.board_size = size
-        self.zobrist_table = np.zeros(shape=(size, size), dtype=np.int32)
+        self.zobrist_table = np.zeros(shape=(size, size), dtype=np.int64)
         for i in range(size):
             for j in range(size):
                 self.zobrist_table[i, j] = random.randint(
