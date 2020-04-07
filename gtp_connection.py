@@ -430,8 +430,8 @@ class GtpConnection():
                      )
 
 
-def negamax(board, tt, bbl = [], wbl = [], HeuristicMode = True,
-                                            SymmetryCheck = True):
+def negamax(board, tt, bbl = [], wbl = [], bneyes = [], wneyes = [], beyes = [], weyes = [],
+            weight = None, HeuristicMode = True, SymmetryCheck = True):
     """
     Simple boolean negamax implementation with transposition table optimization
 
@@ -443,7 +443,7 @@ def negamax(board, tt, bbl = [], wbl = [], HeuristicMode = True,
     # Check transposition table to see whether we have encountered this position
     state_code = tt.code(board)
     ret = tt.lookup(state_code)
-    if ret is not None:
+    if ret is not None: 
         return ret
     if SymmetryCheck is True:
         # Check symmetrical equivalents of current board position
@@ -464,23 +464,26 @@ def negamax(board, tt, bbl = [], wbl = [], HeuristicMode = True,
         for pt in wbl:
             if pt in empty_points:
                 empty_points.remove(pt)
-
+  
     if len(empty_points) == 0:
         return tt.store(state_code, (False, 0))
 
     if HeuristicMode is True:
+        if weight is None:
+            [weight, bneyes, wneyes, beyes, weyes] = statisticaly_evaluate(board, current_color)
         ordered_moves = []
         for move in empty_points: # Heuristic check to order moves
             board.fast_play_move(move, current_color)
-            weight = statisticaly_evaluate(board, current_color)
+            (newweight, newbneyes, newwneyes, newbeyes, newweyes) = statisticaly_evaluate(board, current_color, move, 
+                                                    weight, list(bneyes), list(wneyes), list(beyes), list(weyes))
             board.undo_move(move, current_color)
-            ordered_moves.append((move, weight))
+            ordered_moves.append((move, newweight, newbneyes, newwneyes, newbeyes, newweyes))
         ordered_moves.sort(key=lambda weighted: -weighted[1])
 
-        for (move, _) in ordered_moves:
+        for (move, nw, bne, wne, be, we) in ordered_moves:
             try: # Illegal moves will raise ValueError
                 board.play_move(move, current_color)
-                isWin = not negamax(board, tt, list(bbl), list(wbl))[0]
+                isWin = not negamax(board, tt, list(bbl), list(wbl), bne, wne, be, we, -nw)[0]
                 board.undo_move(move, current_color)
                 if isWin:
                     return tt.store(state_code, (True, move))
@@ -503,7 +506,7 @@ def negamax(board, tt, bbl = [], wbl = [], HeuristicMode = True,
                     bbl.append(move)
                 if current_color is WHITE:
                     wbl.append(move)
-
+    
     return tt.store(state_code, (False, 0))
 
 

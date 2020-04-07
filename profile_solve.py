@@ -11,17 +11,12 @@ def solve():
 
 def setup():
     con.boardsize_cmd(['4'])
+    con.timelimit(['100'])
     moves = [
         ('b', 'a4'),
-        ('w', 'a2'),
-        ('b', 'b1'),
-        ('w', 'b3'),
-        ('b', 'c2'),
-        ('w', 'd1'),
-        ('b', 'd3'),
     ]
     for m in moves:
         con.play_cmd(m)
 
 setup()
-cProfile.run("solve()", sort='cumtime')
+cProfile.run("solve()", sort='time')
